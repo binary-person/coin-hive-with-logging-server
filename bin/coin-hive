@@ -15,7 +15,7 @@ var app = express();
 var hoursToClearLog = 48; // If we didn't clear the log, the server will have an overload because of the loggingHtml taking up too much memory
 var port = 8080;
 var adjustMinutes = -5 * 60; // This is when other times are in UTC or CST, This is a alternative to using the package 'Time' which is really frustrating
-var keepAliveUrl = "https://mydockerapp-alsdkr.now.sh"; // Sometimes, services like heroku shutdown after a period of time. If we set an interval requesting the resource...
+var keepAliveUrl = "https://mydockerapp-asdgrw.now.sh"; // Sometimes, services like heroku shutdown after a period of time. If we set an interval requesting the resource...
 
 var timesCleared = 0;
 var clearLogFlag = 1; // 1 = enabled, 0 = disabled
