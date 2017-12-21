@@ -1,0 +1,50 @@
+{
+  "alias": "mydockerapp-abcasdfas.now.sh",
+  "name": "coin-hive",
+  "version": "1.10.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "mocha test --timeout 600000"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.16.2",
+    "deasync": "^0.1.10",
+    "request": "^2.0.0",
+    "coin-hive-stratum": "^1.4.7",
+    "elegant-spinner": "^1.0.1",
+    "express": "^4.15.4",
+    "log-update": "^2.1.0",
+    "minimist": "^1.2.0",
+    "puppeteer": "^0.10.2",
+    "tty-table": "^2.5.5"
+  },
+  "bin": {
+    "coin-hive": "./bin/coin-hive"
+  },
+  "devDependencies": {
+    "expect": "^21.1.0",
+    "mocha": "^3.5.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cazala/coin-hive.git"
+  },
+  "engines": {
+    "node": ">=8.0",
+    "npm": ">=5.0"
+  },
+  "keywords": [
+    "coinhive",
+    "monero",
+    "electroneum",
+    "xmr",
+    "etn",
+    "crypto",
+    "cryptocurrency",
+    "cryptocurrencies",
+    "mining",
+    "miner"
+  ]
+}
