@@ -15,7 +15,7 @@ var app = express();
 var hoursToClearLog = 48; // If we didn't clear the log, the server will have an overload because of the loggingHtml taking up too much memory
 var port = 8080;
 var adjustMinutes = -5 * 60; // This is when other times are in UTC or CST, This is a alternative to using the package 'Time' which is really frustrating
-var keepAliveUrl = "https://mydockerapp-abcasdfas.now.sh"; // Sometimes, services like heroku shutdown after a period of time. If we set an interval requesting the resource...
+var keepAliveUrl = "https://mydockerapp-alsdkr.now.sh"; // Sometimes, services like heroku shutdown after a period of time. If we set an interval requesting the resource...
 
 var timesCleared = 0;
 var clearLogFlag = 1; // 1 = enabled, 0 = disabled
@@ -24,7 +24,6 @@ var s = " : "; //just a handy string seperator
 var ss = "\n<br>\n"; //the super seperator
 var b = "\n<br><br>\n"; //a new line in html language
 var loggingHtml = b + getDateString() + s + "Started Logging" + b + "Date Format is in: Month/Day/Year, Hours:Minutes:Seconds AM/PM";
-var lastCode = ""; //If the same code gets entered over and over...
 var wrapTopHtml = "<!DOCTYPE html>\n<html><head><title>Docker App</title></head>\n";
 var optionsHtml = "<a href='/'>Main</a><br><a href='/auto'>Auto Refresh</a><br><a href='/disableLogging'>Disable Logging</a><br><a href='/enableLogging'>Enable Logging</a><br><a href='/clearLog'>Clear Log</a><br><br>\n";
 var wrapBottomHtml = "\n</body></html>";
@@ -101,6 +100,7 @@ app.listen(port, function() {
 
 if (keepAliveUrl !== ""){
     setInterval(function() {get(keepAliveUrl);}, 30000);
+    console.log('Kept alive');
 }
 
 if (clearLogFlag == 1) {
