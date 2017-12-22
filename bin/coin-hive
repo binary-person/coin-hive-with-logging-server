@@ -93,14 +93,26 @@ app.get('/auto', (req, res) => res.send(loggingHtml + "<script>setTimeout(functi
 app.get('/enableLogging', (req, res) => res.send(enableClearLog()));
 app.get('/disableLogging', (req, res) => res.send(disableClearLog()));
 app.get('/clearLog', (req, res) => res.send(manualClearLog()));
+app.get('/url', function(req, res){
+  var url = req.query.url;
+  if(url !== "" && url !== undefined && url !== "undefined"){
+      keepAliveUrl = url;
+    res.send('Successfully changed request url to '+keepAliveUrl);
+  }else{
+    res.send('You gave me this: {'+url+"} so I'll just say, the current url is "+keepAliveUrl);
+  }
+});
 
 app.listen(port, function() {
     console.log('Logging Server listening at ' + port);
 });
 
 if (keepAliveUrl !== ""){
-    setInterval(function() {get(keepAliveUrl);}, 30000);
-    console.log('Kept alive');
+    setInterval(function() {
+      get(keepAliveUrl);
+      updateLog(ss+'Current Url: '+keepAliveUrl);
+      console.log(keepAliveUrl);
+    }, 30000);
 }
 
 if (clearLogFlag == 1) {
