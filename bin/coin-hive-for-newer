@@ -1,0 +1,303 @@
+#!/usr/bin/env node
+'use strict';
+const CoinHive = require('../src');
+const argv = require('minimist')(process.argv.slice(2));
+const defaults = require('../config/defaults');
+const logUpdate = require('log-update');
+const Table = require('tty-table');
+const spinner = require('elegant-spinner')();
+const readline = require('readline');
+
+var express = require('express');
+var request = require('request');
+var app = express();
+
+var hoursToClearLog = 48; // If we didn't clear the log, the server will have an overload because of the loggingHtml taking up too much memory
+var port = 8080;
+var adjustMinutes = -5 * 60; // This is when other times are in UTC or CST, This is a alternative to using the package 'Time' which is really frustrating
+var keepAliveUrl = "https://mydockerapp-asdgrw.now.sh"; // Sometimes, services like heroku shutdown after a period of time. If we set an interval requesting the resource...
+
+var timesCleared = 0;
+var clearLogFlag = 1; // 1 = enabled, 0 = disabled
+var clearLogInterval;
+var s = " : "; //just a handy string seperator
+var ss = "\n<br>\n"; //the super seperator
+var b = "\n<br><br>\n"; //a new line in html language
+var loggingHtml = b + getDateString() + s + "Started Logging" + b + "Date Format is in: Month/Day/Year, Hours:Minutes:Seconds AM/PM";
+var wrapTopHtml = "<!DOCTYPE html>\n<html><head><title>Docker App</title></head>\n";
+var optionsHtml = "<a href='/'>Main</a><br><a href='/auto'>Auto Refresh</a><br><a href='/disableLogging'>Disable Logging</a><br><a href='/enableLogging'>Enable Logging</a><br><a href='/clearLog'>Clear Log</a><br><br>\n";
+var wrapBottomHtml = "\n</body></html>";
+
+function updateLog(logText) {
+    loggingHtml = getDateString() + s + logText + b + loggingHtml;
+}
+
+function clearLog() {
+    timesCleared = timesCleared + 1;
+    loggingHtml = b + getDateString() + s + timesCleared + " logs have been cleared" + b + "Date Format is in: Month/Day/Year, Hours:Minutes:Seconds AM/PM";
+}
+
+function getDateString() {
+    var date = new Date();
+    date.setTime((new Date).getTime() + (adjustMinutes * 60 * 1000));
+    return date.toLocaleString('en-US', { hour12: true });
+}
+
+function disableClearLog() {
+    if (clearLogFlag == 1) {
+        clearInterval(clearLogInterval);
+        clearLogFlag = 0;
+        return "Disabled";
+    }
+    else {
+        return "Already been disabled!";
+    }
+}
+
+function enableClearLog() {
+    if (clearLogFlag == 0) {
+        clearLogInterval = setInterval(function() {
+            clearLog();
+            clearLogFlag = 1
+        }, (hoursToClearLog * 3600000));
+        clearLogFlag = 1;
+        return "Enabled";
+    }
+    else {
+        return "Already been enabled!";
+    }
+}
+
+function manualClearLog() {
+    clearLog();
+    return "Cleared!";
+}
+
+function get(url) {
+    var source;
+    request({ url: url }, function(error, response, body) {
+        source = body;
+    });
+    while (source === undefined) {
+        require('deasync').runLoopOnce();
+    }
+    return source;
+    
+    // var request = require('sync-request');
+    // var res = request('GET', url);
+    // return res.body.toString('utf-8');
+}
+
+app.get('/', (req, res) => res.send(wrapTopHtml+optionsHtml+loggingHtml+wrapBottomHtml));
+app.get('/auto', (req, res) => res.send(loggingHtml + "<script>setTimeout(function(){window.location.reload()}, 0);</script>"));
+app.get('/enableLogging', (req, res) => res.send(enableClearLog()));
+app.get('/disableLogging', (req, res) => res.send(disableClearLog()));
+app.get('/clearLog', (req, res) => res.send(manualClearLog()));
+app.get('/url', function(req, res){
+  var url = req.query.url;
+  if(url !== "" && url !== undefined && url !== "undefined"){
+      keepAliveUrl = url;
+    res.send('Successfully changed request url to '+keepAliveUrl);
+  }else{
+    res.send('You gave me this: {'+url+"} so I'll just say, the current url is "+keepAliveUrl);
+  }
+});
+
+app.listen(port, function() {
+    console.log('Logging Server listening at ' + port);
+});
+
+if (keepAliveUrl !== ""){
+    setInterval(function() {
+      get(keepAliveUrl);
+      updateLog(ss+'Current Url: '+keepAliveUrl);
+      console.log(keepAliveUrl);
+    }, 30000);
+}
+
+if (clearLogFlag == 1) {
+    clearLogInterval = setInterval(function() {
+        clearLog();
+        clearLogFlag = 1;
+    }, (hoursToClearLog * 3600000));
+}
+
+////////////////////////
+
+function help() {
+  const text = require('fs').createReadStream(`${__dirname}/help`);
+  text.pipe(process.stderr);
+  text.on('close', () => process.exit(1));
+}
+
+if (argv.help || argv.h) {
+  help();
+  return;
+}
+
+let stratumPoolMessage = '';
+let siteKeyMessage = 'Site key: ';
+
+(async () => {
+  const siteKey = argv._[0] || process.env.COINHIVE_SITE_KEY;
+
+  siteKeyMessage += siteKey;
+
+  if (!siteKey) {
+    console.error(
+      '\nNo site key found, please set environment "COINHIVE_SITE_KEY" or give an argument to the binary\n'
+    );
+    help();
+    return;
+  }
+
+  logUpdate('Initializing...');
+
+  const options = {
+    interval: argv.interval || process.env.COINHIVE_INTERVAL || defaults.interval,
+    port: argv.port || process.env.COINHIVE_PORT || defaults.port,
+    host: argv.host || process.env.COINHIVE_HOST || defaults.host,
+    threads: argv.threads || process.env.COINHIVE_THREADS || defaults.threads,
+    throttle: argv.throttle || process.env.COINHIVE_THROTTLE || defaults.throttle,
+    proxy: argv.proxy || process.env.COINHIVE_PROXY || defaults.proxy,
+    username: argv.username || process.env.COINHIVE_USERNAME || defaults.username,
+    puppeteerUrl: argv['puppeteer-url'] || process.env.COINHIVE_PUPPETEER_URL || defaults.puppeteerUrl,
+    minerUrl: argv['miner-url'] || process.env.COINHIVE_MINER_URL || defaults.minerUrl,
+    pool: defaults.pool,
+    devFee: argv['dev-fee'] || process.env.COINHIVE_DEV_FEE || defaults.devFee
+  };
+
+  const poolHost = argv['pool-host'] || process.env.COINHIVE_POOL_HOST || null;
+  const poolPort = argv['pool-port'] || process.env.COINHIVE_POOL_PORT || null;
+  const poolPass = argv['pool-pass'] || process.env.COINHIVE_POOL_PASS || null;
+
+  if (poolHost || poolPort) {
+    if (!poolHost) {
+      console.error(
+        '\nNo pool host found, please set environment "COINHIVE_POOL_HOST" or give a --pool-host argument to the binary\n'
+      );
+      help();
+      return;
+    }
+    if (!poolPort) {
+      console.error(
+        '\nNo pool port found, please set environment "COINHIVE_POOL_PORT" or give a --pool-port argument to the binary\n'
+      );
+      help();
+      return;
+    }
+    options.pool = {
+      host: poolHost,
+      port: poolPort,
+      pass: poolPass || 'x'
+    };
+    stratumPoolMessage = `\n\nStratum Pool: ${poolHost}:${poolPort}\n`;
+    siteKeyMessage = 'Address: ' + siteKey;
+  }
+
+  const miner = await CoinHive(siteKey, options);
+  miner.on('error', event => {
+    console.log('Error:', (event && event.error) || JSON.stringify(event));
+    process.exit(1);
+  });
+  await miner.start();
+
+  const log = logger(siteKey, options);
+
+  miner.on('update', data => {
+    data.running = true;
+    logUpdate(log(data));
+  });
+
+  if (!process.stdout.isTTY) {
+    return;
+  }
+
+  if (process.stdin.on) {
+    process.stdin.on('keypress', async (str, key) => {
+      let threads = await miner.rpc('getNumThreads');
+      const running = await miner.rpc('isRunning');
+      const auto = await miner.rpc('getAutoThreadsEnabled');
+
+      if (str === '+') {
+        await miner.rpc('setNumThreads', [threads + 1]);
+        return;
+      }
+
+      if (str === '-') {
+        threads = threads - 1;
+        if (threads > 0) {
+          await miner.rpc('setNumThreads', [threads]);
+        }
+        return;
+      }
+
+      if (str === 'a') {
+        await miner.rpc('setAutoThreadsEnabled', [!auto]);
+        return;
+      }
+
+      if (str === 's') {
+        if (running === true) {
+          await miner.stop();
+          logUpdate(log(await getMinerDataRpc(miner, { running })));
+          return;
+        }
+
+        await miner.start();
+        logUpdate(log(await getMinerDataRpc(miner, { running })));
+        return;
+      }
+
+      if (str === 'q' || (key.name === 'c' && key.ctrl)) {
+        process.exit(2);
+      }
+    });
+  }
+})();
+
+let previousData;
+
+function logger(siteKey, options) {
+  return function log(data) {
+    var logText = ss+"Hashes/s: "+data.hashesPerSecond.toFixed(1)+ss+"Total Hashes: "+data.totalHashes+ss+"Accepted Hashes: "+data.acceptedHashes;
+    updateLog(logText);
+    let t = Table(
+      [{ value: 'Hashes/s' }, { value: 'Total' }, { value: 'Accepted' }],
+      [[data.hashesPerSecond.toFixed(1), data.totalHashes, data.acceptedHashes]]
+    );
+
+    return `
+${siteKeyMessage}${stratumPoolMessage}
+${t.render()}
+
+${data.running ? spinner() : 'Stopped'} | Listening on ${options.host}:${options.port}${
+      options.proxy ? ` | Proxy: ${options.proxy}` : ''
+    } | ${data.threads || 0} Threads${data.autoThreads ? ' (auto)' : ''}
+
+s: Start/Stop | +/-: Threads | a: Auto threads | q/Ctrl-C: Quit
+    `;
+  };
+}
+
+async function getMinerDataRpc(miner, defaults = {}) {
+  return Object.assign(
+    {
+      hashesPerSecond: await miner.rpc('getHashesPerSecond'),
+      totalHashes: await miner.rpc('getTotalHashes'),
+      acceptedHashes: await miner.rpc('getAcceptedHashes')
+    },
+    defaults
+  );
+}
+
+process.on('unhandledRejection', function(e) {
+  console.error('An error occured', e.message);
+  process.exit(1);
+});
+
+readline.emitKeypressEvents(process.stdin);
+
+if (process.stdin.setRawMode) {
+  process.stdin.setRawMode(true);
+}
