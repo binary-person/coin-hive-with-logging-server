@@ -20,7 +20,7 @@
     "tty-table": "^2.5.5"
   },
   "bin": {
-    "ch": "./bin/ch"
+    "ch": "./bin/coin-hive"
   },
   "devDependencies": {
     "expect": "^21.1.0",
