@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Version 1
 'use strict';
 const CoinHive = require('../src');
 const argv = require('minimist')(process.argv.slice(2));
